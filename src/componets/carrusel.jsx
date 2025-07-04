@@ -12,7 +12,7 @@ const Carrusel = () => {
 
     const slideItems = [
         {
-            imgSrc: '/imagenes/carruselImg.webp',
+            imgSrc: '/carruselImg.webp',
             title: 'Bienvenido a Mini-Foro',
             description: 'Pásalo en grande, crea tus discusiones en el foro de tu videojuego favorito.',
             showButton: false

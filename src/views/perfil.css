@@ -1,0 +1,62 @@
+*{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.perfil-container{
+    font-family: sans-serif;
+    background: #617791;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: white; /* Color de texto general */
+}
+
+.perfil-content{
+    width: 25em;
+    height: 25em;
+    background: #1b2838;
+    border-radius: 5px;
+    box-shadow: 0 0 10px #000;
+    padding: 10px 10px;
+    display: flex;
+    flex-direction: column;
+    margin: 0 60px;
+}
+
+.image-upload input[type="file"]{
+    display: none;
+}
+
+.image-upload label{
+    display: block;
+    width: 150px;
+    height: 150px;
+    margin: 0 auto 1.5rem;
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    cursor: pointer;
+    font-display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-color: #f8fafc;
+}
+
+.perfil-button{
+    margin-top: 30px;
+    background: #007ad1;
+    border-radius: 10px;
+}
+
+.perfil-button:hover{
+    background: #0060b3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}

@@ -1,0 +1,142 @@
+/* administrador.css */
+.body-admin {
+  background-color: #2d3748;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.admin-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #4a5568;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.admin-title {
+  color: #2d3748;
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+  font-weight: 600;
+  position: relative;
+  padding-bottom: 0.5rem;
+  color: white;
+}
+
+.admin-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 4px;
+  background: #4299e1;
+  border-radius: 2px;
+}
+
+.admin-form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-form-group label {
+  font-weight: 500;
+  color: #4a5568;
+  font-size: 1rem;
+}
+
+.admin-form-group input[type='text'] {
+  padding: 0.75rem 1rem;
+  border: 1px solid #000;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.admin-form-group input[type='text']:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+}
+
+.admin-form-group input[type='file'] {
+  padding: 0.5rem;
+  border: 1px dashed #cbd5e0;
+  border-radius: 8px;
+  
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.admin-form-group input[type='file']:hover {
+  border-color: #a0aec0;
+  
+}
+
+.file-info {
+  font-size: 0.875rem;
+  color: #718096;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background-color: #ebf8ff;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.admin-btn {
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+  align-self: center;
+  width: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.admin-btn:hover {
+  background-color: #3182ce;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.admin-btn:disabled {
+  background-color: #a0aec0;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Efecto de carga */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.admin-btn[disabled]::after {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-left: 10px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+}

@@ -1,4 +1,4 @@
-// src/views/Register.jsx (misma funcionalidad)
+// src/views/Register.jsx
 import { useState } from "react";
 import { Link, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
@@ -20,19 +20,27 @@ const Register = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        Swal.fire('Error', 'Solo se permiten archivos de imagen', 'error');
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        Swal.fire('Error', 'La imagen no debe superar 2MB', 'error');
+        return;
+      }
+      
       setSelectedFile(file);
-      const imageUrl = URL.createObjectURL(file);
-      setPreviewImage(imageUrl);
+      setPreviewImage(URL.createObjectURL(file));
     }
   };
 
   const handleRegister = async () => {
     if (!email || !username || !password) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Campos incompletos',
-        text: 'Por favor completa todos los campos',
-      });
+      Swal.fire('Error', 'Todos los campos son obligatorios', 'error');
+      return;
+    }
+    if (password.length < 6) {
+      Swal.fire('Error', 'La contraseña debe tener al menos 6 caracteres', 'error');
       return;
     }
 
@@ -44,55 +52,60 @@ const Register = () => {
 
       let photoURL = "";
       if (selectedFile) {
-        const imageRef = ref(storage, `avatars/${user.uid}`);
-        await uploadBytes(imageRef, selectedFile);
-        photoURL = await getDownloadURL(imageRef);
+        try {
+          const timestamp = Date.now();
+          const imageRef = ref(storage, `avatars/${user.uid}/profile_${timestamp}.jpg`);
+          await uploadBytes(imageRef, selectedFile);
+          photoURL = await getDownloadURL(imageRef);
+        } catch (uploadError) {
+          console.error("Error subiendo imagen:", uploadError);
+          Swal.fire({
+            icon: 'warning',
+            title: 'Registro exitoso',
+            text: 'Tu cuenta se creó pero no pudimos subir tu imagen. Puedes actualizarla luego.',
+          });
+        }
       }
 
-      await updateProfile(user, {
-        displayName: username,
-        photoURL: photoURL || "",
-      });
-
-      const userData = {
-        uid: user.uid,
-        email: user.email,
-        username: username,
-        avatar: photoURL || "",
-        createdAt: serverTimestamp(),
-        lastLogin: serverTimestamp(),
-        role: "user",
-      };
-
-      await setDoc(doc(db, "users", user.uid), userData);
+      await Promise.all([
+        updateProfile(user, {
+          displayName: username,
+          photoURL: photoURL || ""
+        }),
+        setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          email: user.email,
+          username,
+          avatar: photoURL || "",
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp(),
+          role: "user"
+        })
+      ]);
 
       await Swal.fire({
         icon: 'success',
-        title: '¡Registro exitoso!',
-        text: `Bienvenido, ${username}`,
-        timer: 2000,
+        title: `¡Bienvenido ${username}!`,
         showConfirmButton: false,
+        timer: 2000
       });
-
       navigate("/");
 
     } catch (error) {
-      console.error("Error al registrar:", error);
-
-      let message = "Ocurrió un error inesperado";
-
-      if (error.code === "auth/email-already-in-use") {
-        message = "El correo ya está registrado";
-      } else if (error.code === "auth/invalid-email") {
-        message = "El correo no es válido";
-      } else if (error.code === "auth/weak-password") {
-        message = "La contraseña es muy débil (mínimo 6 caracteres)";
-      }
+      console.error("Error completo:", error);
+      
+      const errorMap = {
+        'auth/email-already-in-use': 'Este correo ya está registrado',
+        'auth/invalid-email': 'Correo electrónico no válido',
+        'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres',
+        'storage/unauthorized': 'Error de permisos con la imagen',
+        'storage/retry-limit-exceeded': 'La imagen es muy pesada'
+      };
 
       Swal.fire({
         icon: 'error',
-        title: 'Error al registrarte',
-        text: message,
+        title: 'Error',
+        text: errorMap[error.code] || 'Ocurrió un error inesperado',
       });
     } finally {
       setLoading(false);
@@ -129,6 +142,7 @@ const Register = () => {
             onChange={e => setEmail(e.target.value)} 
             required 
             disabled={loading}
+            placeholder="ejemplo@correo.com"
           />
         </div>
 
@@ -140,6 +154,8 @@ const Register = () => {
             onChange={e => setUsername(e.target.value)} 
             required 
             disabled={loading}
+            placeholder="Mínimo 3 caracteres"
+            minLength="3"
           />
         </div>
 
@@ -151,6 +167,8 @@ const Register = () => {
             onChange={e => setPassword(e.target.value)} 
             required 
             disabled={loading}
+            placeholder="Mínimo 6 caracteres"
+            minLength="6"
           />
         </div>
 

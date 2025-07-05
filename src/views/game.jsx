@@ -5,7 +5,7 @@ import {
   where, orderBy, onSnapshot, serverTimestamp,
   updateDoc, increment
 } from 'firebase/firestore';
-import { db, app } from '../firebaseconfig';
+import { db } from '../firebaseconfig';
 import { useAuth } from '../auth/authContext';
 import Navbar from '../componets/navbar';
 import './game.css';
@@ -15,7 +15,7 @@ const ForumDiscussion = () => {
     const [discussion, setDiscussion] = useState(null);
     const [replies, setReplies] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [userAvatars, setUserAvatars] = useState({});
+    const [userData, setUserData] = useState({}); // Cambiado de userAvatars a userData
     
     const { id } = useParams();
     const location = useLocation();
@@ -42,11 +42,9 @@ const ForumDiscussion = () => {
                             title: data.title,
                             content: data.content,
                             author: data.author,
-                            authorName: data.authorName,
                             createdAt: data.createdAt?.toDate() || new Date(),
                             gameId: data.gameId,
-                            replies: data.replies || 0,
-                            gameName: data.gameName || 'el juego'
+                            replies: data.replies || 0
                         });
                     } else {
                         navigate('/not-found');
@@ -63,7 +61,7 @@ const ForumDiscussion = () => {
 
                 const unsubscribe = onSnapshot(q, async (querySnapshot) => {
                     const repliesData = [];
-                    const userIds = new Set();
+                    const userIds = new Set([discussion?.author]); // Incluye al autor de la discusión
                     
                     // Recolectar IDs de usuarios
                     querySnapshot.forEach((doc) => {
@@ -76,16 +74,19 @@ const ForumDiscussion = () => {
                         userIds.add(data.author);
                     });
 
-                    // Obtener avatares desde la colección "users" en Firestore
-                    const avatars = {};
+                    // Obtener datos completos de usuarios
+                    const usersData = {};
                     await Promise.all([...userIds].map(async (userId) => {
                         const userDoc = await getDoc(doc(db, 'users', userId));
                         if (userDoc.exists()) {
-                            avatars[userId] = userDoc.data().photoURL || '';
+                            usersData[userId] = {
+                                avatar: userDoc.data().photoURL || userDoc.data().avatar || '',
+                                username: userDoc.data().displayName || userDoc.data().username || 'Usuario'
+                            };
                         }
                     }));
 
-                    setUserAvatars(avatars);
+                    setUserData(usersData);
                     setReplies(repliesData);
                 });
 
@@ -99,7 +100,7 @@ const ForumDiscussion = () => {
         };
 
         fetchDiscussion();
-    }, [id, location.state, navigate]);
+    }, [id, location.state, navigate, discussion?.author]); // Añadido discussion?.author a las dependencias
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -111,7 +112,6 @@ const ForumDiscussion = () => {
                 discussionId: id,
                 content: reply,
                 author: user.uid,
-                authorName: user.displayName || 'Usuario',
                 createdAt: serverTimestamp()
             });
 
@@ -141,12 +141,18 @@ const ForumDiscussion = () => {
         });
     };
 
-    const getAvatar = (userId, userName) => {
-        if (userAvatars[userId]) {
-            return <img src={userAvatars[userId]} alt={`Avatar de ${userName}`} className="user-avatar" />;
+    const renderUserAvatar = (userId) => {
+        const user = userData[userId];
+        if (user?.avatar) {
+            return <img src={user.avatar} alt={`Avatar de ${user.username}`} className="user-avatar" />;
         }
-        // Si no se encuentra el avatar, muestra las iniciales del nombre de usuario
-        return <span className="user-avatar-default">{userName?.charAt(0).toUpperCase()}</span>;
+        // Si no hay avatar, muestra las iniciales
+        const username = user?.username || 'U';
+        return <div className="user-avatar-default">{username.charAt(0).toUpperCase()}</div>;
+    };
+
+    const renderUsername = (userId) => {
+        return userData[userId]?.username || 'Usuario';
     };
 
     if (loading) {
@@ -177,12 +183,12 @@ const ForumDiscussion = () => {
                     <div className="main-discussion">
                         <div className="discussion-header">
                             <div className="user-avatar">
-                                {getAvatar(discussion.author, discussion.authorName)}
+                                {renderUserAvatar(discussion.author)}
                             </div>
                             <div className="discussion-info">
                                 <h2>{discussion.title}</h2>
                                 <div className="discussion-meta">
-                                    <span className="author">{discussion.authorName || discussion.author}</span>
+                                    <span className="author">{renderUsername(discussion.author)}</span>
                                     <span className="time">{formatDate(discussion.createdAt)}</span>
                                 </div>
                             </div>
@@ -199,10 +205,10 @@ const ForumDiscussion = () => {
                             replies.map((reply) => (
                                 <div key={reply.id} className="reply">
                                     <div className="reply-avatar">
-                                        {getAvatar(reply.author, reply.authorName)}
+                                        {renderUserAvatar(reply.author)}
                                     </div>
                                     <div className="reply-content">
-                                        <div className="reply-author">{reply.authorName || reply.author}</div>
+                                        <div className="reply-author">{renderUsername(reply.author)}</div>
                                         <div className="reply-text">{reply.content}</div>
                                         <div className="reply-time">{formatDate(reply.createdAt)}</div>
                                     </div>

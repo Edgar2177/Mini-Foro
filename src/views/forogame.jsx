@@ -10,6 +10,7 @@ import { db } from '../firebaseconfig';
 import { v4 as uuidv4 } from 'uuid';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '../auth/authContext';
+import Swal from 'sweetalert2';
 
 const Forogame = () => {
   // Estados principales
@@ -30,6 +31,7 @@ const Forogame = () => {
   const [artworkTitle, setArtworkTitle] = useState('');
   const [artworkFile, setArtworkFile] = useState(null);
   const [artworkDescription, setArtworkDescription] = useState('');
+  const [artworkFilePreview, setArtworkFilePreview] = useState(null);
 
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -268,21 +270,51 @@ const Forogame = () => {
     }
   };
 
+  // Manejar selección de archivo para artwork
+  const handleArtworkFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validaciones de archivo
+      if (!file.type.match('image.*')) {
+        Swal.fire('Error', 'Solo se permiten archivos de imagen', 'error');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) { // 5MB
+        Swal.fire('Error', 'La imagen no debe superar 5MB', 'error');
+        return;
+      }
+      
+      setArtworkFile(file);
+      setArtworkFilePreview(URL.createObjectURL(file));
+    }
+  };
+
   // Manejar subida de artwork
   const handleUploadArtwork = async (e) => {
     e.preventDefault();
-    if (!user || !artworkFile) {
-      if (!user) navigate('/login');
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    if (!artworkFile) {
+      Swal.fire('Error', 'Debes seleccionar una imagen', 'error');
       return;
     }
 
     try {
       setLoading(true);
-      const fileId = uuidv4();
-      const storageRef = ref(storage, `artworks/${user.uid}/${fileId}`);
+      
+      // Generar nombre único para el archivo
+      const fileExtension = artworkFile.name.split('.').pop();
+      const fileName = `artwork_${Date.now()}.${fileExtension}`;
+      const storageRef = ref(storage, `artworks/${user.uid}/${fileName}`);
+      
+      // Subir archivo
       await uploadBytes(storageRef, artworkFile);
       const downloadURL = await getDownloadURL(storageRef);
 
+      // Crear documento en Firestore
       const newArtwork = {
         gameId: id,
         title: artworkTitle,
@@ -296,12 +328,28 @@ const Forogame = () => {
 
       await addDoc(collection(db, 'artworks'), newArtwork);
       
+      // Resetear formulario
       setShowUploadArtwork(false);
       setArtworkTitle('');
       setArtworkFile(null);
       setArtworkDescription('');
+      setArtworkFilePreview(null);
+      
+      Swal.fire('Éxito', 'Artwork subido correctamente', 'success');
+      
     } catch (error) {
       console.error("Error uploading artwork:", error);
+      let errorMessage = 'Error al subir el artwork';
+      
+      if (error.code === 'storage/unauthorized') {
+        errorMessage = 'No tienes permisos para subir imágenes';
+      } else if (error.code === 'storage/retry-limit-exceeded') {
+        errorMessage = 'La imagen es demasiado grande';
+      } else if (error.code === 'storage/quota-exceeded') {
+        errorMessage = 'Se ha excedido el límite de almacenamiento';
+      }
+      
+      Swal.fire('Error', errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -420,38 +468,38 @@ const Forogame = () => {
           {activeTab === 'discussions' ? (
             <>
               <div className="threads-list">
-  {getPaginatedItems(discussions).length > 0 ? (
-    getPaginatedItems(discussions).map(discussion => (
-      <div 
-        key={discussion.id} 
-        className="thread-card"
-        onClick={() => navigate(`/game/${discussion.id}`)} // Navegar a la página de la discusión
-      >
-              <div className="thread-author">
-                <div className="author-avatar">
-                  {discussion.authorData?.avatar ? (
-                  <img src={discussion.authorData.avatar} alt={discussion.authorData.username} />
-                  ) : (
-                  <span>{discussion.authorData?.username?.charAt(0).toUpperCase()}</span>
-                  )}
-                </div>
-                <span className="author-name">{discussion.authorData?.username}</span>
-              </div>
-                <div className="thread-content">
-                  <h3 className="thread-title">{discussion.title}</h3>
-                  <p>{discussion.content}</p>
-                    <div className="thread-meta">
-                      <span>{new Date(discussion.createdAt).toLocaleDateString()}</span>
-                      <span>{discussion.views} vistas</span>
-                      <span>{discussion.replies} respuestas</span>
+                {getPaginatedItems(discussions).length > 0 ? (
+                  getPaginatedItems(discussions).map(discussion => (
+                    <div 
+                      key={discussion.id} 
+                      className="thread-card"
+                      onClick={() => navigate(`/game/${discussion.id}`)}
+                    >
+                      <div className="thread-author">
+                        <div className="author-avatar">
+                          {discussion.authorData?.avatar ? (
+                            <img src={discussion.authorData.avatar} alt={discussion.authorData.username} />
+                          ) : (
+                            <span>{discussion.authorData?.username?.charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+                        <span className="author-name">{discussion.authorData?.username}</span>
+                      </div>
+                      <div className="thread-content">
+                        <h3 className="thread-title">{discussion.title}</h3>
+                        <p>{discussion.content}</p>
+                        <div className="thread-meta">
+                          <span>{new Date(discussion.createdAt).toLocaleDateString()}</span>
+                          <span>{discussion.views} vistas</span>
+                          <span>{discussion.replies} respuestas</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                ))
+                  ))
                 ) : (
-                <div className="empty-state">
-                  <p>No hay discusiones aún. ¡Sé el primero en crear una!</p>
-                </div>
+                  <div className="empty-state">
+                    <p>No hay discusiones aún. ¡Sé el primero en crear una!</p>
+                  </div>
                 )}
               </div>
               {discussions.length > itemsPerPage && (
@@ -574,13 +622,26 @@ const Forogame = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Imagen</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setArtworkFile(e.target.files[0])}
-                  required
-                />
+                <label>Imagen (Máx. 5MB)</label>
+                <div className="file-upload-container">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleArtworkFileChange}
+                    required
+                    id="artwork-upload"
+                  />
+                  <label htmlFor="artwork-upload" className="file-upload-label">
+                    {artworkFilePreview ? (
+                      <img src={artworkFilePreview} alt="Preview" className="file-preview" />
+                    ) : (
+                      <div className="file-upload-placeholder">
+                        <span>+</span>
+                        <p>Seleccionar imagen</p>
+                      </div>
+                    )}
+                  </label>
+                </div>
               </div>
               <div className="form-group">
                 <label>Descripción</label>
@@ -598,8 +659,8 @@ const Forogame = () => {
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="submit-btn">
-                  Subir Artwork
+                <button type="submit" className="submit-btn" disabled={loading}>
+                  {loading ? 'Subiendo...' : 'Subir Artwork'}
                 </button>
               </div>
             </form>
